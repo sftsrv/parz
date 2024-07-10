@@ -5,6 +5,7 @@ import gleam/string
 pub type ParserError {
   EmptySequence(index: Int)
   ExpectedStr(index: Int, expected: String, found: String)
+  UnexpectedEndOfFile
 }
 
 pub type Parsed {
@@ -24,31 +25,35 @@ type Parser =
 
 fn str(start: String) -> Parser {
   fn(state: ParserState) {
-    let from_str = string.drop_left(state.target, state.end)
-    let starts_with = string.starts_with(from_str, start)
+    case string.drop_left(state.target, state.end) {
+      "" -> Error(UnexpectedEndOfFile)
+      str -> {
+        let starts_with = string.starts_with(str, start)
 
-    case starts_with {
-      True ->
-        Ok(ParserState(
-          state.target,
-          state.end,
-          state.end + string.length(start),
-          Str(start),
-        ))
-      False -> Error(ExpectedStr(state.end, start, from_str))
+        case starts_with {
+          True ->
+            Ok(ParserState(
+              state.target,
+              state.end,
+              state.end + string.length(start),
+              Str(start),
+            ))
+          False -> Error(ExpectedStr(state.end, start, str))
+        }
+      }
     }
   }
 }
 
 fn sequence_of_rec(
   parsers: List(Parser),
-  last_state: ParserState,
+  state: ParserState,
   results: List(ParserState),
 ) -> Result(List(ParserState), ParserError) {
   case parsers {
     [] -> Ok(results)
     [first, ..rest] -> {
-      let result = first(last_state)
+      let result = first(state)
       case result {
         Error(err) -> Error(err)
         Ok(ok) -> {
