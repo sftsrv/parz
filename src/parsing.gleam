@@ -14,7 +14,7 @@ pub type Parsed {
 }
 
 pub type ParserState {
-  ParserState(target: String, index: Int, result: Parsed)
+  ParserState(target: String, start: Int, end: Int, result: Parsed)
 }
 
 /// A Parser is defined as a function that takes in a ParserState and returns a
@@ -24,17 +24,18 @@ type Parser =
 
 fn str(start: String) -> Parser {
   fn(state: ParserState) {
-    let from_str = string.drop_left(state.target, state.index)
+    let from_str = string.drop_left(state.target, state.end)
     let starts_with = string.starts_with(from_str, start)
 
     case starts_with {
       True ->
         Ok(ParserState(
           state.target,
-          state.index + string.length(start),
+          state.end,
+          state.end + string.length(start),
           Str(start),
         ))
-      False -> Error(ExpectedStr(state.index, start, from_str))
+      False -> Error(ExpectedStr(state.end, start, from_str))
     }
   }
 }
@@ -70,11 +71,12 @@ fn sequence_of(parsers: List(Parser)) -> Parser {
     case result {
       Error(err) -> Error(err)
       Ok(ok) -> {
-        let empty_error = Error(EmptySequence(state.index))
+        let empty_error = Error(EmptySequence(state.end))
 
         case list.last(ok) {
           Error(_) -> empty_error
-          Ok(last) -> Ok(ParserState(last.target, last.index, Sequence(ok)))
+          Ok(last) ->
+            Ok(ParserState(last.target, state.end, last.end, Sequence(ok)))
         }
       }
     }
@@ -82,7 +84,7 @@ fn sequence_of(parsers: List(Parser)) -> Parser {
 }
 
 fn run(parser, target) {
-  let initial = ParserState(target, 0, StartOfFile)
+  let initial = ParserState(target, 0, 0, StartOfFile)
   parser(initial)
 }
 
