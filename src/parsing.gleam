@@ -7,14 +7,16 @@ pub type ParserError {
   InvalidRegex(index: Int, re: String)
   EmptySequence(index: Int)
   ExpectedStr(index: Int, expected: String, found: String)
-  ExpectedLetters(index: Int)
+  ExpectedRegex(index: Int, regex: String, found: String)
   UnexpectedEndOfFile
 }
 
 pub type Parsed {
   StartOfFile
   Str(String)
+  Regex(String)
   Letters(String)
+  Digits(String)
   Sequence(List(ParserState))
 }
 
@@ -92,27 +94,35 @@ fn sequence_of(parsers: List(Parser)) -> Parser {
   }
 }
 
-fn letters() -> Parser {
+fn regex(regex: String, t) -> Parser {
   fn(state: ParserState) {
-    let letters_re = "^[A-Za-z]+"
-
-    case regex.from_string(letters_re) {
-      Error(_) -> Error(InvalidRegex(state.end, letters_re))
+    case regex.from_string(regex) {
+      Error(_) -> Error(InvalidRegex(state.end, regex))
       Ok(re) -> {
-        case regex.scan(re, state.target) {
-          [] -> Error(ExpectedLetters(state.end))
+        let str = string.drop_left(state.target, state.end)
+
+        case regex.scan(re, str) {
+          [] -> Error(ExpectedRegex(state.end, regex, str))
           [match, ..] -> {
             Ok(ParserState(
               state.target,
               state.end,
               state.end + string.length(match.content),
-              Letters(match.content),
+              t(match.content),
             ))
           }
         }
       }
     }
   }
+}
+
+fn letters() -> Parser {
+  regex("^[A-Za-z]+", Letters)
+}
+
+fn digits() -> Parser {
+  regex("^[0-9]+", Digits)
 }
 
 fn run(parser, target) {
@@ -122,11 +132,18 @@ fn run(parser, target) {
 
 fn parse(target) {
   let parser =
-    sequence_of([letters(), str(": "), str("hello"), str(" "), str("world")])
+    sequence_of([
+      letters(),
+      digits(),
+      str(": "),
+      str("hello"),
+      str(" "),
+      str("world"),
+    ])
   run(parser, target)
 }
 
 pub fn main() {
-  let parsed = parse("message: hello world")
+  let parsed = parse("message12: hello world")
   io.debug(parsed)
 }
