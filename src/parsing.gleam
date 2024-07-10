@@ -3,7 +3,6 @@ import gleam/list
 import gleam/string
 
 pub type ParserError {
-  BadSequence(index: Int)
   EmptySequence(index: Int)
   ExpectedStr(index: Int, expected: String, found: String)
 }
@@ -11,7 +10,7 @@ pub type ParserError {
 pub type Parsed {
   StartOfFile
   Str(String)
-  Sequence(List(Result(Parsed, ParserError)))
+  Sequence(List(ParserState))
 }
 
 pub type ParserState {
@@ -40,37 +39,42 @@ fn str(start: String) -> Parser {
   }
 }
 
-fn sequence_of(parsers: List(Parser)) -> Parser {
-  fn(state: ParserState) {
-    let results: List(Result(ParserState, ParserError)) =
-      list.fold(parsers, [], fn(states, parser) {
-        case list.last(states) {
-          Error(_) -> [parser(state)]
-          Ok(last_state) -> {
-            case last_state {
-              Error(_) -> states
-              Ok(val) -> list.append(states, [parser(val)])
-            }
+fn sequence_of_rec(
+  parsers: List(Parser),
+  last_state: ParserState,
+  results: List(ParserState),
+) -> Result(List(ParserState), ParserError) {
+  case parsers {
+    [] -> Ok(results)
+    [first, ..rest] -> {
+      let result = first(last_state)
+      case result {
+        Error(err) -> Error(err)
+        Ok(ok) -> {
+          let recurse = sequence_of_rec(rest, ok, results)
+
+          case recurse {
+            Error(err) -> Error(err)
+            Ok(rec) -> Ok([ok, ..rec])
           }
         }
-      })
+      }
+    }
+  }
+}
 
-    case list.last(results) {
-      Error(_) -> Error(EmptySequence(state.index))
-      Ok(last) -> {
-        case last {
-          Error(_) -> Error(BadSequence(state.index))
-          Ok(l) -> {
-            let parsed: List(Result(Parsed, ParserError)) =
-              list.map(results, fn(result) {
-                case result {
-                  Error(err) -> Error(err)
-                  Ok(parser_state) -> Ok(parser_state.result)
-                }
-              })
+fn sequence_of(parsers: List(Parser)) -> Parser {
+  fn(state: ParserState) {
+    let result = sequence_of_rec(parsers, state, [])
 
-            Ok(ParserState(state.target, l.index, Sequence(parsed)))
-          }
+    case result {
+      Error(err) -> Error(err)
+      Ok(ok) -> {
+        let empty_error = Error(EmptySequence(state.index))
+
+        case list.last(ok) {
+          Error(_) -> empty_error
+          Ok(last) -> Ok(ParserState(last.target, last.index, Sequence(ok)))
         }
       }
     }
