@@ -1,11 +1,13 @@
 import gleam/io
 import gleam/list
 import gleam/regex
+import gleam/result
 import gleam/string
 
 pub type ParserError {
   InvalidRegex(index: Int, re: String)
   EmptySequence(index: Int)
+  EmptyChoices(index: Int)
   ExpectedStr(index: Int, expected: String, found: String)
   ExpectedRegex(index: Int, regex: String, found: String)
   UnexpectedEndOfFile
@@ -13,11 +15,16 @@ pub type ParserError {
 
 pub type Parsed {
   StartOfFile
+
+  // parsers
   Str(String)
   Regex(String)
   Letters(String)
   Digits(String)
+
+  // combinators
   Sequence(List(ParserState))
+  Choice(ParserState)
 }
 
 pub type ParserState {
@@ -82,15 +89,37 @@ fn sequence_of(parsers: List(Parser)) -> Parser {
     case result {
       Error(err) -> Error(err)
       Ok(ok) -> {
-        let empty_error = Error(EmptySequence(state.end))
-
         case list.last(ok) {
-          Error(_) -> empty_error
+          Error(_) -> Error(EmptySequence(state.end))
           Ok(last) ->
             Ok(ParserState(last.target, state.end, last.end, Sequence(ok)))
         }
       }
     }
+  }
+}
+
+fn choice_of_rec(
+  parsers: List(Parser),
+  state: ParserState,
+) -> Result(ParserState, ParserError) {
+  case parsers {
+    [] -> Error(EmptyChoices(state.end))
+    [first, ..rest] -> {
+      case first(state) {
+        Error(_) -> choice_of_rec(rest, state)
+        Ok(ok) -> Ok(ok)
+      }
+    }
+  }
+}
+
+fn choice_of(parsers: List(Parser)) -> Parser {
+  fn(state: ParserState) {
+    choice_of_rec(parsers, state)
+    |> result.map(fn(res) {
+      ParserState(res.target, res.start, res.end, Choice(res))
+    })
   }
 }
 
@@ -139,11 +168,12 @@ fn parse(target) {
       str("hello"),
       str(" "),
       str("world"),
+      choice_of([str("!"), str("")]),
     ])
   run(parser, target)
 }
 
 pub fn main() {
-  let parsed = parse("message12: hello world")
+  let parsed = parse("message12: hello world!")
   io.debug(parsed)
 }
