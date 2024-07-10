@@ -1,16 +1,20 @@
 import gleam/io
 import gleam/list
+import gleam/regex
 import gleam/string
 
 pub type ParserError {
+  InvalidRegex(index: Int, re: String)
   EmptySequence(index: Int)
   ExpectedStr(index: Int, expected: String, found: String)
+  ExpectedLetters(index: Int)
   UnexpectedEndOfFile
 }
 
 pub type Parsed {
   StartOfFile
   Str(String)
+  Letters(String)
   Sequence(List(ParserState))
 }
 
@@ -88,17 +92,41 @@ fn sequence_of(parsers: List(Parser)) -> Parser {
   }
 }
 
+fn letters() -> Parser {
+  fn(state: ParserState) {
+    let letters_re = "^[A-Za-z]+"
+
+    case regex.from_string(letters_re) {
+      Error(_) -> Error(InvalidRegex(state.end, letters_re))
+      Ok(re) -> {
+        case regex.scan(re, state.target) {
+          [] -> Error(ExpectedLetters(state.end))
+          [match, ..] -> {
+            Ok(ParserState(
+              state.target,
+              state.end,
+              state.end + string.length(match.content),
+              Letters(match.content),
+            ))
+          }
+        }
+      }
+    }
+  }
+}
+
 fn run(parser, target) {
   let initial = ParserState(target, 0, 0, StartOfFile)
   parser(initial)
 }
 
 fn parse(target) {
-  let parser = sequence_of([str("hello"), str(" "), str("world")])
+  let parser =
+    sequence_of([letters(), str(": "), str("hello"), str(" "), str("world")])
   run(parser, target)
 }
 
 pub fn main() {
-  let parsed = parse("hello world")
+  let parsed = parse("message: hello world")
   io.debug(parsed)
 }
