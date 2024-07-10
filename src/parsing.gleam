@@ -13,7 +13,7 @@ pub type ParserError {
   UnexpectedEndOfFile
 }
 
-pub type Parsed {
+pub type Parsed(a) {
   StartOfFile
 
   // parsers
@@ -23,21 +23,16 @@ pub type Parsed {
   Digits(String)
 
   // combinators
-  Sequence(List(ParserState))
-  Choice(ParserState)
+  Sequence(List(ParserState(a)))
+  Choice(ParserState(a))
 }
 
-pub type ParserState {
-  ParserState(target: String, start: Int, end: Int, result: Parsed)
+pub type ParserState(result) {
+  ParserState(target: String, start: Int, end: Int, result)
 }
 
-/// A Parser is defined as a function that takes in a ParserState and returns a
-/// ParserState or an Error
-type Parser =
-  fn(ParserState) -> Result(ParserState, ParserError)
-
-fn str(start: String) -> Parser {
-  fn(state: ParserState) {
+fn str(start) {
+  fn(state: ParserState(a)) {
     case string.drop_left(state.target, state.end) {
       "" -> Error(UnexpectedEndOfFile)
       str -> {
@@ -58,11 +53,7 @@ fn str(start: String) -> Parser {
   }
 }
 
-fn sequence_of_rec(
-  parsers: List(Parser),
-  state: ParserState,
-  results: List(ParserState),
-) -> Result(List(ParserState), ParserError) {
+fn sequence_of_rec(parsers, state, results) {
   case parsers {
     [] -> Ok(results)
     [first, ..rest] -> {
@@ -82,8 +73,8 @@ fn sequence_of_rec(
   }
 }
 
-fn sequence_of(parsers: List(Parser)) -> Parser {
-  fn(state: ParserState) {
+fn sequence_of(parsers) {
+  fn(state: ParserState(a)) {
     let result = sequence_of_rec(parsers, state, [])
 
     case result {
@@ -100,9 +91,9 @@ fn sequence_of(parsers: List(Parser)) -> Parser {
 }
 
 fn choice_of_rec(
-  parsers: List(Parser),
-  state: ParserState,
-) -> Result(ParserState, ParserError) {
+  parsers,
+  state: ParserState(a),
+) -> Result(ParserState(b), ParserError) {
   case parsers {
     [] -> Error(EmptyChoices(state.end))
     [first, ..rest] -> {
@@ -114,8 +105,8 @@ fn choice_of_rec(
   }
 }
 
-fn choice_of(parsers: List(Parser)) -> Parser {
-  fn(state: ParserState) {
+fn choice_of(parsers) {
+  fn(state) {
     choice_of_rec(parsers, state)
     |> result.map(fn(res) {
       ParserState(res.target, res.start, res.end, Choice(res))
@@ -123,8 +114,8 @@ fn choice_of(parsers: List(Parser)) -> Parser {
   }
 }
 
-fn regex(regex: String, t) -> Parser {
-  fn(state: ParserState) {
+fn regex(regex, t) {
+  fn(state: ParserState(a)) {
     case regex.from_string(regex) {
       Error(_) -> Error(InvalidRegex(state.end, regex))
       Ok(re) -> {
@@ -146,11 +137,11 @@ fn regex(regex: String, t) -> Parser {
   }
 }
 
-fn letters() -> Parser {
+fn letters() {
   regex("^[A-Za-z]+", Letters)
 }
 
-fn digits() -> Parser {
+fn digits() {
   regex("^[0-9]+", Digits)
 }
 
