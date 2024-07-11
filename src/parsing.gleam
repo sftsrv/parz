@@ -1,5 +1,4 @@
 import gleam/io
-import gleam/list
 import gleam/regex
 import gleam/result
 import gleam/string
@@ -21,10 +20,6 @@ pub type Parsed(a) {
   Regex(String)
   Letters(String)
   Digits(String)
-
-  // combinators
-  Sequence(List(ParserState(a)))
-  Choice(ParserState(a))
 }
 
 pub type ParserState(result) {
@@ -53,64 +48,34 @@ fn str(start) {
   }
 }
 
-fn sequence_of_rec(parsers, state, results) {
-  case parsers {
-    [] -> Ok(results)
-    [first, ..rest] -> {
-      let result = first(state)
-      case result {
-        Error(err) -> Error(err)
-        Ok(ok) -> {
-          let recurse = sequence_of_rec(rest, ok, results)
-
-          case recurse {
-            Error(err) -> Error(err)
-            Ok(rec) -> Ok([ok, ..rec])
-          }
-        }
-      }
-    }
-  }
-}
-
 fn sequence_of(parsers) {
-  fn(state: ParserState(a)) {
-    let result = sequence_of_rec(parsers, state, [])
-
-    case result {
-      Error(err) -> Error(err)
-      Ok(ok) -> {
-        case list.last(ok) {
-          Error(_) -> Error(EmptySequence(state.end))
-          Ok(last) ->
-            Ok(ParserState(last.target, state.end, last.end, Sequence(ok)))
-        }
-      }
-    }
-  }
-}
-
-fn choice_of_rec(
-  parsers,
-  state: ParserState(a),
-) -> Result(ParserState(b), ParserError) {
-  case parsers {
-    [] -> Error(EmptyChoices(state.end))
-    [first, ..rest] -> {
-      case first(state) {
-        Error(_) -> choice_of_rec(rest, state)
-        Ok(ok) -> Ok(ok)
+  fn(state) {
+    case parsers {
+      [] -> Ok([])
+      [first, ..rest] -> {
+        first(state)
+        |> result.map(fn(ok) {
+          ok
+          |> sequence_of(rest)
+          |> result.map(fn(rec) { [ok, ..rec] })
+        })
+        |> result.flatten
       }
     }
   }
 }
 
 fn choice_of(parsers) {
-  fn(state) {
-    choice_of_rec(parsers, state)
-    |> result.map(fn(res) {
-      ParserState(res.target, res.start, res.end, Choice(res))
-    })
+  fn(state: ParserState(a)) {
+    case parsers {
+      [] -> Error(EmptyChoices(state.end))
+      [first, ..rest] -> {
+        case first(state) {
+          Error(_) -> choice_of(rest)(state)
+          Ok(ok) -> Ok(ok)
+        }
+      }
+    }
   }
 }
 
