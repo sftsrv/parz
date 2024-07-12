@@ -161,7 +161,7 @@ fn right(l: Parser, r: Parser) -> Parser {
       Ok(okl) ->
         case r(okl) {
           Error(err) -> Error(err)
-          Ok(okr) -> Ok(ParserState(okr.target, okl.start, okr.end, okr.result))
+          Ok(okr) -> Ok(ParserState(okr.target, state.end, okr.end, okr.result))
         }
     }
   }
@@ -174,7 +174,26 @@ fn left(l: Parser, r: Parser) -> Parser {
       Ok(okl) ->
         case r(okl) {
           Error(err) -> Error(err)
-          Ok(okr) -> Ok(ParserState(okl.target, okl.start, okr.end, okl.result))
+          Ok(okr) -> Ok(ParserState(okl.target, state.end, okr.end, okl.result))
+        }
+    }
+  }
+}
+
+fn tap(val, label) {
+  io.debug(label)
+  io.debug(val)
+  val
+}
+
+fn between(l, keep, r) {
+  fn(state: ParserState) {
+    case l(state) {
+      Error(err) -> Error(err)
+      Ok(okl) ->
+        case left(keep, r)(okl) {
+          Error(err) -> Error(err)
+          Ok(okr) -> Ok(ParserState(okr.target, okl.start, okr.end, okr.result))
         }
     }
   }
@@ -193,14 +212,20 @@ fn parse(target) {
       str(": "),
       sequence([str("hello"), str(" "), str("world")]),
       many(choice([str("."), str("!"), str("?")])),
-      left(str("left"), str("right")),
-      right(str("left"), str("right")),
+      between(
+        str("'"),
+        sequence([
+          left(str("left"), str("right")),
+          right(str("left"), str("right")),
+        ]),
+        str("'"),
+      ),
     ])
   run(parser, target)
 }
 
 pub fn main() {
-  let content = "message12: hello world!?!?leftrightleftright"
+  let content = "message12: hello world!?!?'leftrightleftright'"
   io.debug(string.length(content))
 
   let parsed = parse(content)
