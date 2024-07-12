@@ -5,8 +5,6 @@ import gleam/string
 
 pub type ParserError {
   InvalidRegex(index: Int, re: String)
-  EmptySequence(index: Int)
-  EmptyChoices(index: Int)
   ExpectedStr(index: Int, expected: String, found: String)
   ExpectedRegex(index: Int, regex: String, found: String)
   UnexpectedEndOfFile
@@ -30,10 +28,8 @@ fn str(start) {
   fn(state: ParserState(a)) {
     case string.drop_left(state.target, state.end) {
       "" -> Error(UnexpectedEndOfFile)
-      str -> {
-        let starts_with = string.starts_with(str, start)
-
-        case starts_with {
+      str ->
+        case string.starts_with(str, start) {
           True ->
             Ok(ParserState(
               state.target,
@@ -43,7 +39,6 @@ fn str(start) {
             ))
           False -> Error(ExpectedStr(state.end, start, str))
         }
-      }
     }
   }
 }
@@ -68,13 +63,16 @@ fn sequence_of(parsers) {
 fn choice_of(parsers) {
   fn(state: ParserState(a)) {
     case parsers {
-      [] -> Error(EmptyChoices(state.end))
-      [first, ..rest] -> {
+      [] -> Ok(state)
+      [first, ..rest] ->
         case first(state) {
-          Error(_) -> choice_of(rest)(state)
           Ok(ok) -> Ok(ok)
+          Error(err) ->
+            case rest {
+              [] -> Error(err)
+              _ -> choice_of(rest)(state)
+            }
         }
-      }
     }
   }
 }
@@ -124,12 +122,12 @@ fn parse(target) {
       str("hello"),
       str(" "),
       str("world"),
-      choice_of([str("!"), str("")]),
+      choice_of([str("."), str("!"), str("?")]),
     ])
   run(parser, target)
 }
 
 pub fn main() {
-  let parsed = parse("message12: hello world!")
+  let parsed = parse("message12: hello world?")
   io.debug(parsed)
 }
