@@ -79,6 +79,15 @@ pub fn between(l: Parser, keep: Parser, r: Parser) -> Parser {
   }
 }
 
+pub fn maybe(parser) {
+  fn(input) {
+    case parser(input) {
+      Ok(ok) -> Ok(ok)
+      Error(_) -> Ok(ParserState("", input))
+    }
+  }
+}
+
 fn many_rec(parser: Parser, input, acc) {
   case parser(input) {
     Error(err) -> Error(err)
@@ -129,11 +138,11 @@ pub fn label_error(parser, message) {
   }
 }
 
-pub fn map(parser, transform) {
+pub fn map(parser: Parser, transform) {
   fn(input) {
     case parser(input) {
       Error(err) -> Error(err)
-      Ok(ok) -> Ok(transform(ok))
+      Ok(ok) -> Ok(#(transform(ok.matched), ok.remaining))
     }
   }
 }
