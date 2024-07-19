@@ -150,7 +150,7 @@ pub fn map(parser: Parser(a), transform) {
   fn(input) {
     case parser(input) {
       Error(err) -> Error(err)
-      Ok(ok) -> Ok(#(transform(ok.matched), ok.remaining))
+      Ok(ok) -> Ok(ParserState(transform(ok.matched), ok.remaining))
     }
   }
 }

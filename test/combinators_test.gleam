@@ -195,11 +195,11 @@ pub fn map_test() {
 
   run(parser, "[hello]")
   |> should.be_ok
-  |> should.equal(#(Content("[hello]"), ""))
+  |> should.equal(ParserState(Content("[hello]"), ""))
 
   run(parser, "[hello]x")
   |> should.be_ok
-  |> should.equal(#(Content("[hello]"), "x"))
+  |> should.equal(ParserState(Content("[hello]"), "x"))
 
   run(parser, "[hellox")
   |> should.be_error
