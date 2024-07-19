@@ -1,3 +1,4 @@
+import gleam/list
 import gleam/string
 import parz/types.{type Parser, type ParserState, ParserState}
 import parz/util.{tap}
@@ -82,15 +83,6 @@ pub fn between(l: Parser(a), keep: Parser(b), r: Parser(c)) -> Parser(b) {
   }
 }
 
-pub fn maybe(parser) {
-  fn(input) {
-    case parser(input) {
-      Ok(ok) -> Ok(ok)
-      Error(_) -> Ok(ParserState("", input))
-    }
-  }
-}
-
 fn many_rec(
   parser: Parser(a),
   input,
@@ -140,6 +132,31 @@ pub fn map(parser: Parser(a), transform) {
     case parser(input) {
       Error(err) -> Error(err)
       Ok(ok) -> Ok(ParserState(transform(ok.matched), ok.remaining))
+    }
+  }
+}
+
+pub fn as_list(parser: Parser(a)) {
+  fn(input) {
+    case parser(input) {
+      Error(err) -> Error(err)
+      Ok(ok) -> Ok(ParserState([ok.matched], ok.remaining))
+    }
+  }
+}
+
+pub fn separator1(parser: Parser(a), sep: Parser(_)) {
+  choice([
+    sequence([as_list(parser), many(right(sep, parser))]) |> map(list.concat),
+    as_list(parser),
+  ])
+}
+
+pub fn separator(parser: Parser(a), sep: Parser(_)) {
+  fn(input) {
+    case separator1(parser, sep)(input) {
+      Error(_) -> Ok(ParserState([], input))
+      Ok(ok) -> Ok(ok)
     }
   }
 }

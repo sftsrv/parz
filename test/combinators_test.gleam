@@ -1,8 +1,8 @@
 import gleeunit/should
 import parz.{run}
 import parz/combinators.{
-  between, choice, concat_str, label_error, left, many, many1, map, maybe, right,
-  sequence,
+  as_list, between, choice, concat_str, label_error, left, many, many1, map,
+  right, separator, separator1, sequence,
 }
 import parz/parsers.{letters, str}
 import parz/types.{ParserState}
@@ -147,22 +147,6 @@ pub fn concat_str_test() {
   |> should.be_error
 }
 
-pub fn maybe_test() {
-  let parser = maybe(str("x"))
-
-  run(parser, "x")
-  |> should.be_ok
-  |> should.equal(ParserState("x", ""))
-
-  run(parser, "!")
-  |> should.be_ok
-  |> should.equal(ParserState("", "!"))
-
-  run(parser, "")
-  |> should.be_ok
-  |> should.equal(ParserState("", ""))
-}
-
 pub fn label_error_test() {
   let message = "Expected [letters]"
   let parser =
@@ -202,5 +186,55 @@ pub fn map_test() {
   |> should.equal(ParserState(Content("[hello]"), "x"))
 
   run(parser, "[hellox")
+  |> should.be_error
+}
+
+pub fn as_list_test() {
+  let parser = as_list(str("x"))
+
+  run(parser, "x")
+  |> should.be_ok
+  |> should.equal(ParserState(["x"], ""))
+
+  run(parser, "x!")
+  |> should.be_ok
+  |> should.equal(ParserState(["x"], "!"))
+
+  run(parser, "xx")
+  |> should.be_ok
+  |> should.equal(ParserState(["x"], "x"))
+
+  run(parser, "[hellox")
+  |> should.be_error
+}
+
+pub fn separator_test() {
+  let parser = separator(letters(), str(";"))
+
+  run(parser, "well;hello;world")
+  |> should.be_ok
+  |> should.equal(ParserState(["well", "hello", "world"], ""))
+
+  run(parser, "hello!")
+  |> should.be_ok
+  |> should.equal(ParserState(["hello"], "!"))
+
+  run(parser, "!")
+  |> should.be_ok
+  |> should.equal(ParserState([], "!"))
+}
+
+pub fn separator1_test() {
+  let parser = separator1(letters(), str(";"))
+
+  run(parser, "well;hello;world")
+  |> should.be_ok
+  |> should.equal(ParserState(["well", "hello", "world"], ""))
+
+  run(parser, "hello!")
+  |> should.be_ok
+  |> should.equal(ParserState(["hello"], "!"))
+
+  run(parser, "!")
   |> should.be_error
 }
