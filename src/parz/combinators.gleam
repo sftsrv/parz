@@ -1,7 +1,6 @@
 import gleam/list
 import gleam/string
 import parz/types.{type Parser, type ParserState, ParserState}
-import parz/util.{tap}
 
 fn sequence_rec(
   parsers: List(Parser(a)),
