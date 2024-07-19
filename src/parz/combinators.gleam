@@ -122,19 +122,8 @@ pub fn many(parser: Parser(a)) {
   }
 }
 
-pub fn concat(parser: Parser(List(a)), merge) {
-  fn(input) {
-    case parser(input) {
-      Error(err) -> Error(err)
-      Ok(ok) -> {
-        Ok(ParserState(merge(ok.matched), ok.remaining))
-      }
-    }
-  }
-}
-
 pub fn concat_str(parser) {
-  concat(parser, string.concat)
+  map(parser, string.concat)
 }
 
 pub fn label_error(parser, message) {

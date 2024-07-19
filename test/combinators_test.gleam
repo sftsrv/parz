@@ -1,8 +1,8 @@
 import gleeunit/should
 import parz.{run}
 import parz/combinators.{
-  between, choice, concat, concat_str, label_error, left, many, many1, map,
-  maybe, right, sequence,
+  between, choice, concat_str, label_error, left, many, many1, map, maybe, right,
+  sequence,
 }
 import parz/parsers.{letters, str}
 import parz/types.{ParserState}
@@ -132,7 +132,7 @@ pub fn sequence_test() {
   |> should.be_error
 }
 
-pub fn concat_test() {
+pub fn concat_str_test() {
   let parser = concat_str(sequence([str("["), letters(), str("]")]))
 
   run(parser, "[hello]")
