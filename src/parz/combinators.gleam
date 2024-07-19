@@ -1,7 +1,7 @@
 import gleam/string
 import parz/types.{type Parser, type ParserState, ParserState}
 
-fn sequence_rec(parsers: List(Parser), input, acc) {
+fn sequence_rec(parsers: List(Parser(a)), input, acc) {
   case parsers {
     [] -> Ok(#([], input))
     [first, ..rest] ->
@@ -19,11 +19,11 @@ fn sequence_rec(parsers: List(Parser), input, acc) {
   }
 }
 
-pub fn sequence(parsers: List(Parser)) {
+pub fn sequence(parsers: List(Parser(a))) {
   fn(input) { sequence_rec(parsers, input, []) }
 }
 
-pub fn choice(parsers: List(Parser)) {
+pub fn choice(parsers: List(Parser(a))) {
   fn(input) {
     case parsers {
       [] -> Error("No more choices provided")
@@ -40,7 +40,7 @@ pub fn choice(parsers: List(Parser)) {
   }
 }
 
-pub fn right(l: Parser, r: Parser) -> Parser {
+pub fn right(l: Parser(a), r: Parser(b)) -> Parser(b) {
   fn(input) {
     case l(input) {
       Error(err) -> Error(err)
@@ -53,7 +53,7 @@ pub fn right(l: Parser, r: Parser) -> Parser {
   }
 }
 
-pub fn left(l: Parser, r: Parser) -> Parser {
+pub fn left(l: Parser(a), r: Parser(b)) -> Parser(a) {
   fn(input) {
     case l(input) {
       Error(err) -> Error(err)
@@ -66,7 +66,7 @@ pub fn left(l: Parser, r: Parser) -> Parser {
   }
 }
 
-pub fn between(l: Parser, keep: Parser, r: Parser) -> Parser {
+pub fn between(l: Parser(a), keep: Parser(b), r: Parser(c)) -> Parser(b) {
   fn(input) {
     case l(input) {
       Error(err) -> Error(err)
@@ -88,7 +88,7 @@ pub fn maybe(parser) {
   }
 }
 
-fn many_rec(parser: Parser, input, acc) {
+fn many_rec(parser: Parser(a), input, acc) {
   case parser(input) {
     Error(err) -> Error(err)
     Ok(ok) -> {
@@ -103,11 +103,11 @@ fn many_rec(parser: Parser, input, acc) {
   }
 }
 
-pub fn many1(parser: Parser) {
+pub fn many1(parser: Parser(a)) {
   fn(input) { many_rec(parser, input, []) }
 }
 
-pub fn many(parser: Parser) {
+pub fn many(parser: Parser(a)) {
   fn(input) {
     case many1(parser)(input) {
       Error(_) -> Ok(#([], input))
@@ -138,7 +138,7 @@ pub fn label_error(parser, message) {
   }
 }
 
-pub fn map(parser: Parser, transform) {
+pub fn map(parser: Parser(a), transform) {
   fn(input) {
     case parser(input) {
       Error(err) -> Error(err)

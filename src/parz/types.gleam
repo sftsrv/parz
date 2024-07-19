@@ -1,9 +1,9 @@
-pub type ParserState {
-  ParserState(matched: String, remaining: String)
+pub type ParserState(a) {
+  ParserState(matched: a, remaining: String)
 }
 
 pub type Err =
   String
 
-pub type Parser =
-  fn(String) -> Result(ParserState, Err)
+pub type Parser(a) =
+  fn(String) -> Result(ParserState(a), Err)

@@ -2,7 +2,7 @@ import gleam/regex
 import gleam/string
 import parz/types.{type Parser, ParserState}
 
-pub fn str(start) -> Parser {
+pub fn str(start) -> Parser(String) {
   fn(input) {
     case string.starts_with(input, start) {
       False -> Error("Expected " <> start <> " but found " <> input)
