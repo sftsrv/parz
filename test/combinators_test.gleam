@@ -83,19 +83,19 @@ pub fn many_test() {
 
   run(parser, "!")
   |> should.be_ok
-  |> should.equal(#([], "!"))
+  |> should.equal(ParserState([], "!"))
 
   run(parser, "x")
   |> should.be_ok
-  |> should.equal(#(["x"], ""))
+  |> should.equal(ParserState(["x"], ""))
 
   run(parser, "xxx")
   |> should.be_ok
-  |> should.equal(#(["x", "x", "x"], ""))
+  |> should.equal(ParserState(["x", "x", "x"], ""))
 
   run(parser, "xx!")
   |> should.be_ok
-  |> should.equal(#(["x", "x"], "!"))
+  |> should.equal(ParserState(["x", "x"], "!"))
 }
 
 pub fn many1_test() {
@@ -106,15 +106,15 @@ pub fn many1_test() {
 
   run(parser, "x")
   |> should.be_ok
-  |> should.equal(#(["x"], ""))
+  |> should.equal(ParserState(["x"], ""))
 
   run(parser, "xxx")
   |> should.be_ok
-  |> should.equal(#(["x", "x", "x"], ""))
+  |> should.equal(ParserState(["x", "x", "x"], ""))
 
   run(parser, "xx!")
   |> should.be_ok
-  |> should.equal(#(["x", "x"], "!"))
+  |> should.equal(ParserState(["x", "x"], "!"))
 }
 
 pub fn sequence_test() {

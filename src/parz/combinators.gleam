@@ -91,15 +91,18 @@ pub fn maybe(parser) {
   }
 }
 
-fn many_rec(parser: Parser(a), input, acc) {
+fn many_rec(
+  parser: Parser(a),
+  input,
+  acc,
+) -> Result(ParserState(List(a)), String) {
   case parser(input) {
     Error(err) -> Error(err)
     Ok(ok) -> {
       case many_rec(parser, ok.remaining, acc) {
-        Error(_) -> Ok(#([ok.matched], ok.remaining))
+        Error(_) -> Ok(ParserState([ok.matched], ok.remaining))
         Ok(rec) -> {
-          let #(matches, remaining) = rec
-          Ok(#([ok.matched, ..matches], remaining))
+          Ok(ParserState([ok.matched, ..rec.matched], rec.remaining))
         }
       }
     }
@@ -113,7 +116,7 @@ pub fn many1(parser: Parser(a)) {
 pub fn many(parser: Parser(a)) {
   fn(input) {
     case many1(parser)(input) {
-      Error(_) -> Ok(#([], input))
+      Error(_) -> Ok(ParserState([], input))
       Ok(ok) -> Ok(ok)
     }
   }
