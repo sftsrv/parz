@@ -1,37 +1,39 @@
-import gleam/list
+import gleam/string
 import parz/types.{type Parser, type ParserState, ParserState}
-import parz/util.{tap}
 
-fn sequence_rec(parsers, state, acc) {
+fn sequence_rec(parsers: List(Parser), input, acc) {
   case parsers {
-    [] -> Ok([])
+    [] -> Ok(#([], input))
     [first, ..rest] ->
-      case first(state) {
+      case first(input) {
         Error(err) -> Error(err)
         Ok(ok) ->
-          case sequence_rec(rest, ok, acc) {
+          case sequence_rec(rest, ok.remaining, acc) {
             Error(err) -> Error(err)
-            Ok(rec) -> Ok([ok, ..rec])
+            Ok(rec) -> {
+              let #(matches, remaining) = rec
+              Ok(#([ok.matched, ..matches], remaining))
+            }
           }
       }
   }
 }
 
-pub fn sequence(parsers) {
-  fn(state) { sequence_rec(parsers, state, []) }
+pub fn sequence(parsers: List(Parser)) {
+  fn(input) { sequence_rec(parsers, input, []) }
 }
 
 pub fn choice(parsers: List(Parser)) {
-  fn(state) {
+  fn(input) {
     case parsers {
       [] -> Error("No more choices provided")
       [first, ..rest] ->
-        case first(state) {
+        case first(input) {
           Ok(ok) -> Ok(ok)
           Error(err) ->
             case rest {
               [] -> Error(err)
-              _ -> choice(rest)(state)
+              _ -> choice(rest)(input)
             }
         }
     }
@@ -39,8 +41,8 @@ pub fn choice(parsers: List(Parser)) {
 }
 
 pub fn right(l: Parser, r: Parser) -> Parser {
-  fn(state) {
-    case l(state) {
+  fn(input) {
+    case l(input) {
       Error(err) -> Error(err)
       Ok(okl) ->
         case r(okl.remaining) {
@@ -52,8 +54,8 @@ pub fn right(l: Parser, r: Parser) -> Parser {
 }
 
 pub fn left(l: Parser, r: Parser) -> Parser {
-  fn(state) {
-    case l(state) {
+  fn(input) {
+    case l(input) {
       Error(err) -> Error(err)
       Ok(okl) ->
         case r(okl.remaining) {
@@ -65,8 +67,8 @@ pub fn left(l: Parser, r: Parser) -> Parser {
 }
 
 pub fn between(l: Parser, keep: Parser, r: Parser) -> Parser {
-  fn(state) {
-    case l(state) {
+  fn(input) {
+    case l(input) {
       Error(err) -> Error(err)
       Ok(okl) ->
         case left(keep, r)(okl.remaining) {
@@ -77,8 +79,8 @@ pub fn between(l: Parser, keep: Parser, r: Parser) -> Parser {
   }
 }
 
-fn many_rec(parser: Parser, state, acc) {
-  case parser(state) {
+fn many_rec(parser: Parser, input, acc) {
+  case parser(input) {
     Error(err) -> Error(err)
     Ok(ok) -> {
       case many_rec(parser, ok.remaining, acc) {
@@ -93,14 +95,45 @@ fn many_rec(parser: Parser, state, acc) {
 }
 
 pub fn many1(parser: Parser) {
-  fn(state) { many_rec(parser, state, []) }
+  fn(input) { many_rec(parser, input, []) }
 }
 
 pub fn many(parser: Parser) {
-  fn(state) {
-    case many1(parser)(state) {
-      Error(_) -> Ok(#([], state))
+  fn(input) {
+    case many1(parser)(input) {
+      Error(_) -> Ok(#([], input))
       Ok(ok) -> Ok(ok)
+    }
+  }
+}
+
+pub fn concat(parser) {
+  fn(input) {
+    case parser(input) {
+      Error(err) -> Error(err)
+      Ok(ok) -> {
+        let #(parts, remainder) = ok
+
+        Ok(ParserState(string.concat(parts), remainder))
+      }
+    }
+  }
+}
+
+pub fn label_error(parser, message) {
+  fn(input) {
+    case parser(input) {
+      Ok(ok) -> Ok(ok)
+      Error(_) -> Error(message)
+    }
+  }
+}
+
+pub fn map(parser, transform) {
+  fn(input) {
+    case parser(input) {
+      Error(err) -> Error(err)
+      Ok(ok) -> Ok(transform(ok))
     }
   }
 }

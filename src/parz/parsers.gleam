@@ -3,11 +3,11 @@ import gleam/string
 import parz/types.{type Parser, ParserState}
 
 pub fn str(start) -> Parser {
-  fn(state) {
-    case string.starts_with(state, start) {
-      False -> Error("Expected " <> start <> "But found " <> state)
+  fn(input) {
+    case string.starts_with(input, start) {
+      False -> Error("Expected " <> start <> " but found " <> input)
       True -> {
-        let remaining = string.drop_left(state, string.length(start))
+        let remaining = string.drop_left(input, string.length(start))
         Ok(ParserState(start, remaining))
       }
     }
@@ -15,15 +15,15 @@ pub fn str(start) -> Parser {
 }
 
 pub fn regex(regex) {
-  fn(state) {
+  fn(input) {
     case regex.from_string(regex) {
       Error(_) -> Error("Invalid Regex Provided " <> regex)
       Ok(re) -> {
-        case regex.scan(re, state) {
+        case regex.scan(re, input) {
           [] -> Error("String does not match regex " <> regex)
           [match, ..] -> {
             let remaining =
-              string.drop_left(state, string.length(match.content))
+              string.drop_left(input, string.length(match.content))
             Ok(ParserState(match.content, remaining))
           }
         }

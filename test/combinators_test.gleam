@@ -1,6 +1,8 @@
 import gleeunit/should
 import parz.{run}
-import parz/combinators.{between, choice, left, many, many1, right, sequence}
+import parz/combinators.{
+  between, choice, concat, label_error, left, many, many1, map, right, sequence,
+}
 import parz/parsers.{letters, str}
 import parz/types.{ParserState}
 
@@ -112,4 +114,76 @@ pub fn many1_test() {
   run(parser, "xx!")
   |> should.be_ok
   |> should.equal(#(["x", "x"], "!"))
+}
+
+pub fn sequence_test() {
+  let parser = sequence([str("["), letters(), str("]")])
+
+  run(parser, "[hello]")
+  |> should.be_ok
+  |> should.equal(#(["[", "hello", "]"], ""))
+
+  run(parser, "[hello]!")
+  |> should.be_ok
+  |> should.equal(#(["[", "hello", "]"], "!"))
+
+  run(parser, "[hello")
+  |> should.be_error
+}
+
+pub fn concat_test() {
+  let parser = concat(sequence([str("["), letters(), str("]")]))
+
+  run(parser, "[hello]")
+  |> should.be_ok
+  |> should.equal(ParserState("[hello]", ""))
+
+  run(parser, "[hello]!")
+  |> should.be_ok
+  |> should.equal(ParserState("[hello]", "!"))
+
+  run(parser, "[hello")
+  |> should.be_error
+}
+
+pub fn label_error_test() {
+  let message = "Expected [letters]"
+  let parser =
+    concat(sequence([str("["), letters(), str("]")])) |> label_error(message)
+
+  run(parser, "[hello]")
+  |> should.be_ok
+  |> should.equal(ParserState("[hello]", ""))
+
+  run(parser, "[hellox")
+  |> should.be_error
+  |> should.equal(message)
+}
+
+type Transformed {
+  NoContent
+  Content(String)
+}
+
+pub fn map_test() {
+  let parser =
+    concat(sequence([str("["), letters(), str("]")]))
+    |> map(fn(ok) {
+      let seq = ok.matched
+      case seq {
+        "" -> NoContent
+        content -> Content(content)
+      }
+    })
+
+  run(parser, "[hello]")
+  |> should.be_ok
+  |> should.equal(Content("[hello]"))
+
+  run(parser, "[hello]x")
+  |> should.be_ok
+  |> should.equal(Content("[hello]"))
+
+  run(parser, "[hellox")
+  |> should.be_error
 }
