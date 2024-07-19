@@ -1,26 +1,29 @@
 import gleam/string
 import parz/types.{type Parser, type ParserState, ParserState}
+import parz/util.{tap}
 
-fn sequence_rec(parsers: List(Parser(a)), input, acc) {
+fn sequence_rec(
+  parsers: List(Parser(a)),
+  input: String,
+  acc: ParserState(List(a)),
+) -> Result(ParserState(List(a)), String) {
   case parsers {
-    [] -> Ok(#([], input))
+    [] -> Ok(ParserState([], input))
     [first, ..rest] ->
       case first(input) {
         Error(err) -> Error(err)
         Ok(ok) ->
           case sequence_rec(rest, ok.remaining, acc) {
             Error(err) -> Error(err)
-            Ok(rec) -> {
-              let #(matches, remaining) = rec
-              Ok(#([ok.matched, ..matches], remaining))
-            }
+            Ok(rec) ->
+              Ok(ParserState([ok.matched, ..rec.matched], rec.remaining))
           }
       }
   }
 }
 
 pub fn sequence(parsers: List(Parser(a))) {
-  fn(input) { sequence_rec(parsers, input, []) }
+  fn(input) { sequence_rec(parsers, input, ParserState([], input)) }
 }
 
 pub fn choice(parsers: List(Parser(a))) {
@@ -116,17 +119,19 @@ pub fn many(parser: Parser(a)) {
   }
 }
 
-pub fn concat(parser) {
+pub fn concat(parser: Parser(List(a)), merge) {
   fn(input) {
     case parser(input) {
       Error(err) -> Error(err)
       Ok(ok) -> {
-        let #(parts, remainder) = ok
-
-        Ok(ParserState(string.concat(parts), remainder))
+        Ok(ParserState(merge(ok.matched), ok.remaining))
       }
     }
   }
+}
+
+pub fn concat_str(parser) {
+  concat(parser, string.concat)
 }
 
 pub fn label_error(parser, message) {

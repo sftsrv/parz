@@ -20,7 +20,10 @@ pub fn regex(regex) {
       Error(_) -> Error("Invalid Regex Provided " <> regex)
       Ok(re) -> {
         case regex.scan(re, input) {
-          [] -> Error("String does not match regex " <> regex)
+          [] ->
+            Error(
+              "String does not match Regex: " <> regex <> "String: " <> input,
+            )
           [match, ..] -> {
             let remaining =
               string.drop_left(input, string.length(match.content))
