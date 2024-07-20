@@ -135,6 +135,19 @@ pub fn map(parser: Parser(a), transform) {
   }
 }
 
+pub fn try_map(parser: Parser(a), transform) {
+  fn(input) {
+    case parser(input) {
+      Error(err) -> Error(err)
+      Ok(ok) ->
+        case transform(ok.matched) {
+          Error(err) -> Error(err)
+          Ok(t) -> Ok(ParserState(t, ok.remaining))
+        }
+    }
+  }
+}
+
 pub fn as_list(parser: Parser(a)) {
   fn(input) {
     case parser(input) {

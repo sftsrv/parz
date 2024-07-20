@@ -1,6 +1,8 @@
 import gleeunit/should
 import parz.{run}
-import parz/combinators.{label_error, left, map, separator1, sequence}
+import parz/combinators.{
+  choice, label_error, left, map, separator1, sequence, try_map,
+}
 import parz/parsers.{letters, regex, str}
 import parz/types.{ParserState}
 
@@ -8,7 +10,6 @@ type Kind {
   StringKind
   BooleanKind
   NumberKind
-  UnknownKind
 }
 
 type Identifier {
@@ -16,17 +17,16 @@ type Identifier {
 }
 
 type Node {
-  UnknownNode
   Node(name: Identifier, kind: Kind)
 }
 
 type NodePart {
-  K(kind: Kind)
-  I(identifier: Identifier)
+  NodeKind(kind: Kind)
+  NodeIdentifier(identifier: Identifier)
 }
 
-type AST {
-  AST(List(Node))
+type Ast {
+  Ast(List(Node))
 }
 
 const input = "name:string;
@@ -36,35 +36,31 @@ active:boolean;"
 const custom_error = "Expected : but found something else"
 
 fn parser() {
-  let name =
-    left(letters(), str(":") |> label_error(custom_error))
+  let identifier =
+    letters()
     |> map(Identifier)
-    |> map(I)
 
-  let kind =
-    left(letters(), str(";"))
-    |> map(fn(ok) {
-      case ok {
-        "string" -> StringKind
-        "number" -> NumberKind
-        "boolean" -> BooleanKind
-        _ -> UnknownKind
-      }
-    })
-    |> map(K)
+  let string_kind = str("string") |> map(fn(_) { StringKind })
+  let number_kind = str("number") |> map(fn(_) { NumberKind })
+  let boolean_kind = str("boolean") |> map(fn(_) { BooleanKind })
 
+  let kind = choice([string_kind, number_kind, boolean_kind])
   let node =
-    sequence([name, kind])
-    |> map(fn(ok) {
+    sequence([
+      left(identifier, str(":") |> label_error(custom_error))
+        |> map(NodeIdentifier),
+      left(kind, str(";")) |> map(NodeKind),
+    ])
+    |> try_map(fn(ok) {
       case ok {
-        [I(i), K(k)] -> Node(i, k)
-        _ -> UnknownNode
+        [NodeIdentifier(i), NodeKind(k)] -> Ok(Node(i, k))
+        _ -> Error("Failed to match identifier:kind")
       }
     })
 
   let whitespace = regex("\\s*")
 
-  let parser = separator1(node, whitespace) |> map(AST)
+  let parser = separator1(node, whitespace) |> map(Ast)
 
   parser
 }
@@ -73,7 +69,7 @@ pub fn simple_parser_test() {
   run(parser(), input)
   |> should.be_ok
   |> should.equal(ParserState(
-    AST([
+    Ast([
       Node(Identifier("name"), StringKind),
       Node(Identifier("age"), NumberKind),
       Node(Identifier("active"), BooleanKind),
