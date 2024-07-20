@@ -135,6 +135,10 @@ pub fn map(parser: Parser(a), transform) {
   }
 }
 
+pub fn map_token(parser: Parser(a), t) {
+  map(parser, fn(_) { t })
+}
+
 pub fn try_map(parser: Parser(a), transform) {
   fn(input) {
     case parser(input) {

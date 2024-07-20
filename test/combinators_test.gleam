@@ -2,9 +2,9 @@ import gleeunit/should
 import parz.{run}
 import parz/combinators.{
   as_list, between, choice, concat_str, label_error, left, many, many1, map,
-  right, separator, separator1, sequence,
+  map_token, right, separator, separator1, sequence, try_map,
 }
-import parz/parsers.{letters, str}
+import parz/parsers.{letters, regex, str}
 import parz/types.{ParserState}
 
 pub fn left_test() {
@@ -186,6 +186,54 @@ pub fn map_test() {
   |> should.equal(ParserState(Content("[hello]"), "x"))
 
   run(parser, "[hellox")
+  |> should.be_error
+}
+
+pub fn try_map_test() {
+  let error = "No content"
+  let parser =
+    between(str("["), regex("^[A-Za-z]*"), str("]"))
+    |> try_map(fn(ok) {
+      case ok {
+        "" -> Error(error)
+        content -> Ok(Content(content))
+      }
+    })
+
+  run(parser, "[hello]")
+  |> should.be_ok
+  |> should.equal(ParserState(Content("hello"), ""))
+
+  run(parser, "[hello]x")
+  |> should.be_ok
+  |> should.equal(ParserState(Content("hello"), "x"))
+
+  run(parser, "[]x")
+  |> should.be_error
+  |> should.equal(error)
+
+  run(parser, "[hellox")
+  |> should.be_error
+}
+
+type Token {
+  Token
+}
+
+pub fn map_token_test() {
+  let parser =
+    str("hello")
+    |> map_token(Token)
+
+  run(parser, "hello")
+  |> should.be_ok
+  |> should.equal(ParserState(Token, ""))
+
+  run(parser, "hellox")
+  |> should.be_ok
+  |> should.equal(ParserState(Token, "x"))
+
+  run(parser, "xhello")
   |> should.be_error
 }
 

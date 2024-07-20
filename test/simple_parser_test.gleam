@@ -1,7 +1,7 @@
 import gleeunit/should
 import parz.{run}
 import parz/combinators.{
-  choice, label_error, left, map, separator1, sequence, try_map,
+  choice, label_error, left, map, map_token, separator1, sequence, try_map,
 }
 import parz/parsers.{letters, regex, str}
 import parz/types.{ParserState}
@@ -40,9 +40,9 @@ fn parser() {
     letters()
     |> map(Identifier)
 
-  let string_kind = str("string") |> map(fn(_) { StringKind })
-  let number_kind = str("number") |> map(fn(_) { NumberKind })
-  let boolean_kind = str("boolean") |> map(fn(_) { BooleanKind })
+  let string_kind = str("string") |> map_token(StringKind)
+  let number_kind = str("number") |> map_token(NumberKind)
+  let boolean_kind = str("boolean") |> map_token(BooleanKind)
 
   let kind = choice([string_kind, number_kind, boolean_kind])
   let node =
