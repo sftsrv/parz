@@ -1,4 +1,4 @@
-import gleam/regex
+import gleam/regexp
 import gleam/string
 import parz/types.{type Parser, ParserState}
 
@@ -7,26 +7,26 @@ pub fn str(start) -> Parser(String) {
     case string.starts_with(input, start) {
       False -> Error("Expected " <> start <> " but found " <> input)
       True -> {
-        let remaining = string.drop_left(input, string.length(start))
+        let remaining = string.drop_start(input, string.length(start))
         Ok(ParserState(start, remaining))
       }
     }
   }
 }
 
-pub fn regex(regex) {
+pub fn regex(re_str) {
   fn(input) {
-    case regex.from_string(regex) {
-      Error(_) -> Error("Invalid Regex Provided " <> regex)
+    case regexp.from_string(re_str) {
+      Error(_) -> Error("Invalid Regex Provided " <> re_str)
       Ok(re) -> {
-        case regex.scan(re, input) {
+        case regexp.scan(re, input) {
           [] ->
             Error(
-              "String does not match Regex: " <> regex <> "String: " <> input,
+              "String does not match Regex: " <> re_str <> "String: " <> input,
             )
           [match, ..] -> {
             let remaining =
-              string.drop_left(input, string.length(match.content))
+              string.drop_start(input, string.length(match.content))
             Ok(ParserState(match.content, remaining))
           }
         }

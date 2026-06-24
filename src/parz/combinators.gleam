@@ -5,7 +5,6 @@ import parz/types.{type Parser, type ParserState, ParserState}
 fn sequence_rec(
   parsers: List(Parser(a)),
   input: String,
-  acc: ParserState(List(a)),
 ) -> Result(ParserState(List(a)), String) {
   case parsers {
     [] -> Ok(ParserState([], input))
@@ -13,7 +12,7 @@ fn sequence_rec(
       case first(input) {
         Error(err) -> Error(err)
         Ok(ok) ->
-          case sequence_rec(rest, ok.remaining, acc) {
+          case sequence_rec(rest, ok.remaining) {
             Error(err) -> Error(err)
             Ok(rec) ->
               Ok(ParserState([ok.matched, ..rec.matched], rec.remaining))
@@ -23,7 +22,7 @@ fn sequence_rec(
 }
 
 pub fn sequence(parsers: List(Parser(a))) {
-  fn(input) { sequence_rec(parsers, input, ParserState([], input)) }
+  fn(input) { sequence_rec(parsers, input) }
 }
 
 pub fn choice(parsers: List(Parser(a))) {
@@ -82,15 +81,11 @@ pub fn between(l: Parser(a), keep: Parser(b), r: Parser(c)) -> Parser(b) {
   }
 }
 
-fn many_rec(
-  parser: Parser(a),
-  input,
-  acc,
-) -> Result(ParserState(List(a)), String) {
+fn many_rec(parser: Parser(a), input) -> Result(ParserState(List(a)), String) {
   case parser(input) {
     Error(err) -> Error(err)
     Ok(ok) -> {
-      case many_rec(parser, ok.remaining, acc) {
+      case many_rec(parser, ok.remaining) {
         Error(_) -> Ok(ParserState([ok.matched], ok.remaining))
         Ok(rec) -> {
           Ok(ParserState([ok.matched, ..rec.matched], rec.remaining))
@@ -101,7 +96,7 @@ fn many_rec(
 }
 
 pub fn many1(parser: Parser(a)) {
-  fn(input) { many_rec(parser, input, []) }
+  fn(input) { many_rec(parser, input) }
 }
 
 pub fn many(parser: Parser(a)) {
@@ -163,7 +158,7 @@ pub fn as_list(parser: Parser(a)) {
 
 pub fn separator1(parser: Parser(a), sep: Parser(_)) {
   choice([
-    sequence([as_list(parser), many(right(sep, parser))]) |> map(list.concat),
+    sequence([as_list(parser), many(right(sep, parser))]) |> map(list.flatten),
     as_list(parser),
   ])
 }
