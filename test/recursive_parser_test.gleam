@@ -14,8 +14,7 @@ type Ast {
 }
 
 // example implementation is only recursive on
-// the brackets for now. Expressions only support one
-// operation per set of brackets
+// the brackets for now
 const input = "(((1)))"
 
 fn constant() {
