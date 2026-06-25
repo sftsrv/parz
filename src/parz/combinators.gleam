@@ -172,16 +172,10 @@ pub fn separator(parser: Parser(a), sep: Parser(_)) {
   }
 }
 
-pub fn recurser(
-  base base: Parser(a),
-  rec rec: fn(Parser(a)) -> Parser(a),
-) -> Parser(a) {
-  let new_rec = rec(base)
+// pub fn lazy(thunk: fn() -> Parser(a)) {
+//   fn(state) { thunk()(state) }
+// }
 
-  fn(input) {
-    case new_rec(input) {
-      Ok(ok) -> Ok(ok)
-      Error(_) -> recurser(new_rec, rec)(input)
-    }
-  }
+pub fn lazy(thunk: fn() -> Parser(a)) {
+  fn(state) { thunk()(state) }
 }
