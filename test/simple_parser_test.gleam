@@ -35,34 +35,47 @@ active:boolean;"
 
 const custom_error = "Expected : but found something else"
 
+fn identifier() {
+  letters()
+  |> map(Identifier)
+}
+
+fn string_kind() {
+  str("string") |> map_token(StringKind)
+}
+
+fn number_kind() {
+  str("number") |> map_token(NumberKind)
+}
+
+fn boolean_kind() {
+  str("boolean") |> map_token(BooleanKind)
+}
+
+fn kind() {
+  choice([string_kind(), number_kind(), boolean_kind()])
+}
+
+fn node() {
+  sequence([
+    left(identifier(), str(":") |> label_error(custom_error))
+      |> map(NodeIdentifier),
+    left(kind(), str(";")) |> map(NodeKind),
+  ])
+  |> try_map(fn(ok) {
+    case ok {
+      [NodeIdentifier(i), NodeKind(k)] -> Ok(Node(i, k))
+      _ -> Error("Failed to match identifier:kind")
+    }
+  })
+}
+
+fn whitespace() {
+  regex("\\s*")
+}
+
 fn parser() {
-  let identifier =
-    letters()
-    |> map(Identifier)
-
-  let string_kind = str("string") |> map_token(StringKind)
-  let number_kind = str("number") |> map_token(NumberKind)
-  let boolean_kind = str("boolean") |> map_token(BooleanKind)
-
-  let kind = choice([string_kind, number_kind, boolean_kind])
-  let node =
-    sequence([
-      left(identifier, str(":") |> label_error(custom_error))
-        |> map(NodeIdentifier),
-      left(kind, str(";")) |> map(NodeKind),
-    ])
-    |> try_map(fn(ok) {
-      case ok {
-        [NodeIdentifier(i), NodeKind(k)] -> Ok(Node(i, k))
-        _ -> Error("Failed to match identifier:kind")
-      }
-    })
-
-  let whitespace = regex("\\s*")
-
-  let parser = separator1(node, whitespace) |> map(Ast)
-
-  parser
+  separator1(node(), whitespace()) |> map(Ast)
 }
 
 pub fn simple_parser_test() {

@@ -13,7 +13,7 @@ The project exposes the following modules:
 
 1. `parz.` - contains the `run` method which is used for executing a parser
 2. `parz/combinators` - the parser combinator library
-3. `pars/parsers` - some simple, prmiitive parsers
+3. `pars/parsers` - some simple, primitive parsers
 
 ## Usage
 
@@ -26,10 +26,15 @@ import parz.{run}
 import pars/combinators
 import pars/parsers
 
+// Parsers are typically defined as functions at the top-level
+// since gleam only allows recursive functions to be defined there
+pub fn parser() {
+  // .. define a parser using combinators and/or parsers
+}
+
+
 pub fn main() {
   // For an example usage look at the `tests/sample_parser_test.gleam` file
-  let parser = // .. define a parser
-
   let result = run(parser, content_to_parse)
 }
 ```
