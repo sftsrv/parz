@@ -26,18 +26,17 @@ import parz.{run}
 import pars/combinators
 import pars/parsers
 
-// Parsers are typically defined as functions at the top-level
-// since gleam only allows recursive functions to be defined there
 pub fn parser() {
   // .. define a parser using combinators and/or parsers
 }
 
 
 pub fn main() {
-  // For an example usage look at the `tests/sample_parser_test.gleam` file
   let result = run(parser, content_to_parse)
 }
 ```
+
+> For more examples see the `test` directory
 
 Further documentation can be found at <https://hexdocs.pm/parz>.
 
