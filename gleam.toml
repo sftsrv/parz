@@ -1,10 +1,10 @@
 name = "parz"
-version = "0.0.4"
+version = "1.0.0"
 
 description = "A simple parser combinator library"
 licences = ["Apache-2.0"]
 repository = { type = "github", user = "sftsrv", repo = "parz" }
-# links = [{ title = "Website", href = "https://gleam.run" }]
+links = [{ title = "me", href = "https://nabeelvalley.co.za" }]
 
 [dependencies]
 gleam_stdlib = ">= 1.0.0 and < 2.0.0"

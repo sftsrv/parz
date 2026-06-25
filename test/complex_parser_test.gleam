@@ -106,7 +106,8 @@ fn parser() {
 }
 
 pub fn complex_parser_test() {
-  run(parser(), input)
+  input
+  |> run(parser())
   |> should.be_ok
   |> should.equal(ParserState(
     Ast([
@@ -135,7 +136,8 @@ pub fn complex_parser_test() {
 }
 
 pub fn complex_parser_error_test() {
-  run(parser(), "name;number")
+  "name;number"
+  |> run(parser())
   |> should.be_error
   |> should.equal(custom_error)
 }

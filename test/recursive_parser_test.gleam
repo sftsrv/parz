@@ -32,7 +32,8 @@ fn parser() {
 }
 
 pub fn recursive_parser_test() {
-  run(parser(), input)
+  input
+  |> run(parser())
   |> should.be_ok
   |> should.equal(ParserState(Ast(Group(Group(Group(Const("1"))))), ""))
 }

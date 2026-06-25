@@ -17,7 +17,8 @@ fn parser() {
 }
 
 pub fn simple_parser_test() {
-  run(parser(), "this/is/my/path")
+  "this/is/my/path"
+  |> run(parser())
   |> should.be_ok
   |> should.equal(ParserState(Path(["this", "is", "my", "path"]), ""))
 }

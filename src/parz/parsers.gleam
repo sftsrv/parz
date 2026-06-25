@@ -2,6 +2,7 @@ import gleam/regexp
 import gleam/string
 import parz/types.{type Parser, ParserState}
 
+/// Create a parser that matches a fixed string literal
 pub fn str(start) -> Parser(String) {
   fn(input) {
     case string.starts_with(input, start) {
@@ -14,6 +15,7 @@ pub fn str(start) -> Parser(String) {
   }
 }
 
+/// Create a parser that matches a string using a regex
 pub fn regex(re_str) {
   fn(input) {
     case regexp.from_string(re_str) {
@@ -35,14 +37,17 @@ pub fn regex(re_str) {
   }
 }
 
+/// Utility parser for letters `^[A-Za-z]+`
 pub fn letters() {
   regex("^[A-Za-z]+")
 }
 
+/// Utility parser for digits `^[0-9]+`
 pub fn digits() {
   regex("^[0-9]+")
 }
 
+/// Utility parser for whitespace `^\s*`
 pub fn whitespace() {
-  regex("\\s*")
+  regex("^\\s*")
 }
