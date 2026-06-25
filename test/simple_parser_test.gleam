@@ -1,15 +1,17 @@
 import gleeunit/should
 import parz.{run}
 import parz/combinators.{
-  choice, label_error, left, map, map_token, separator1, sequence, try_map,
+  between, choice, label_error, lazy, left, map, map_token, padded, separator1,
+  sequence, try_map,
 }
-import parz/parsers.{letters, regex, str}
+import parz/parsers.{letters, str, whitespace}
 import parz/types.{ParserState}
 
-type Kind {
-  StringKind
-  BooleanKind
-  NumberKind
+type Type {
+  StringType
+  BooleanType
+  NumberType
+  ObjectType(List(Node))
 }
 
 type Identifier {
@@ -17,11 +19,11 @@ type Identifier {
 }
 
 type Node {
-  Node(name: Identifier, kind: Kind)
+  Node(name: Identifier, kind: Type)
 }
 
 type NodePart {
-  NodeKind(kind: Kind)
+  NodeKind(kind: Type)
   NodeIdentifier(identifier: Identifier)
 }
 
@@ -29,11 +31,26 @@ type Ast {
   Ast(List(Node))
 }
 
-const input = "name:string;
-age:number;
-active:boolean;"
+const input = "
+  name: string;
+  age: number;
+  active: boolean;
+  details: {
+    meta: {
+      other: string;
+      inner: {
+        count: boolean;
+      };
+    };
+  };
+  total: number;
+"
 
 const custom_error = "Expected : but found something else"
+
+fn trim(parser) {
+  padded(whitespace(), parser)
+}
 
 fn identifier() {
   letters()
@@ -41,26 +58,36 @@ fn identifier() {
 }
 
 fn string_kind() {
-  str("string") |> map_token(StringKind)
+  str("string") |> map_token(StringType)
 }
 
 fn number_kind() {
-  str("number") |> map_token(NumberKind)
+  str("number") |> map_token(NumberType)
 }
 
 fn boolean_kind() {
-  str("boolean") |> map_token(BooleanKind)
+  str("boolean") |> map_token(BooleanType)
+}
+
+fn object_kind() {
+  lazy(fn() {
+    between(
+      trim(str("{")),
+      choice([nodes() |> map(ObjectType)]),
+      trim(str("}")),
+    )
+  })
 }
 
 fn kind() {
-  choice([string_kind(), number_kind(), boolean_kind()])
+  choice([string_kind(), number_kind(), boolean_kind(), object_kind()])
 }
 
 fn node() {
   sequence([
-    left(identifier(), str(":") |> label_error(custom_error))
+    left(identifier(), trim(str(":")) |> label_error(custom_error))
       |> map(NodeIdentifier),
-    left(kind(), str(";")) |> map(NodeKind),
+    left(kind(), str(";")) |> label_error("expected ;") |> map(NodeKind),
   ])
   |> try_map(fn(ok) {
     case ok {
@@ -70,12 +97,12 @@ fn node() {
   })
 }
 
-fn whitespace() {
-  regex("\\s*")
+fn nodes() {
+  separator1(node(), whitespace())
 }
 
 fn parser() {
-  separator1(node(), whitespace()) |> map(Ast)
+  trim(nodes()) |> map(Ast)
 }
 
 pub fn simple_parser_test() {
@@ -83,9 +110,25 @@ pub fn simple_parser_test() {
   |> should.be_ok
   |> should.equal(ParserState(
     Ast([
-      Node(Identifier("name"), StringKind),
-      Node(Identifier("age"), NumberKind),
-      Node(Identifier("active"), BooleanKind),
+      Node(Identifier("name"), StringType),
+      Node(Identifier("age"), NumberType),
+      Node(Identifier("active"), BooleanType),
+      Node(
+        Identifier("details"),
+        ObjectType([
+          Node(
+            Identifier("meta"),
+            ObjectType([
+              Node(Identifier("other"), StringType),
+              Node(
+                Identifier("inner"),
+                ObjectType([Node(Identifier("count"), BooleanType)]),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+      Node(Identifier("total"), NumberType),
     ]),
     "",
   ))

@@ -42,3 +42,7 @@ pub fn letters() {
 pub fn digits() {
   regex("^[0-9]+")
 }
+
+pub fn whitespace() {
+  regex("\\s*")
+}

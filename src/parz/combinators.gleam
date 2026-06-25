@@ -175,3 +175,7 @@ pub fn separator(parser: Parser(a), sep: Parser(_)) {
 pub fn lazy(thunk: fn() -> Parser(a)) {
   fn(state) { thunk()(state) }
 }
+
+pub fn padded(space, parser) {
+  between(space, parser, space)
+}
