@@ -78,8 +78,8 @@ pub fn left(l: Parser(a), r: Parser(b)) -> Parser(a) {
   }
 }
 
-// Takes the value between two parsers. Keeps the middle result. Discards the
-// left and right values
+/// Takes the value between two parsers. Keeps the middle result. Discards the
+/// left and right values
 pub fn between(l: Parser(a), keep: Parser(b), r: Parser(c)) -> Parser(b) {
   fn(input) {
     case l(input) {
